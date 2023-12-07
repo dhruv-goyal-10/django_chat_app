@@ -38,7 +38,7 @@
                 });
         }
         
-        const api_url = 'http://' + window.location.host + '/chat/api/' +roomName + '/'
+        const api_url = 'https://' + window.location.host + '/chat/api/' +roomName + '/'
         // console.log(api_url)
         fetch(api_url)
             .then(response => {
@@ -71,7 +71,7 @@
             });
 
         const chatSocket = new WebSocket(
-            'ws://'
+            'wss://'
             + window.location.host
             + '/ws/chat/'
             + roomName
