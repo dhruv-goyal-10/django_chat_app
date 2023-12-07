@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Chat Room</title>
+</head>
+
+<body>
+    <h1 id = "main-heading">Chat Room -> </h1>
+    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+    <input id="chat-message-input" type="text" size="100"><br>
+    <input id="chat-message-submit" type="button" value="Send">
+    {{ room_name|json_script:"room-name" }}
+    {{ user_name|json_script:"user-name" }}
+    <script>
+        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+        const userName = JSON.parse(document.getElementById('user-name').textContent);
+
+        document.querySelector('#main-heading').innerHTML += roomName;
+
+        function fetchFromAPI(apiUrl) {
+            return fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    console.log(response)
+                    console.log(response.json())
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(data); // Prints result from `response.json()` in getRequest
+                    return data; // Returning the parsed JSON data
+                })
+                .catch(error => {
+                    throw new Error('There was a problem with the fetch operation:', error);
+                });
+        }
+        
+        const api_url = 'http://' + window.location.host + '/chat/api/' +roomName + '/'
+        // console.log(api_url)
+        fetch(api_url)
+            .then(response => {
+                if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(result => {
+                for (var i = 0; i < result.length; i++) {
+                var username_to_show = "";
+                if (result[i].author === userName)
+                    username_to_show = "Me";
+                else
+                    username_to_show = result[i].author;
+
+                document.querySelector('#chat-log').value +=
+                    (username_to_show +
+                    ' -> ' +
+                    result[i].content +
+                    "       (" +
+                    result[i].timestamp +
+                    ")" +
+                    '\n');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching from API:', error);
+                // Handle error here
+            });
+
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/chat/'
+            + roomName
+            + '/'
+            + userName
+            + '/'
+        );
+
+        chatSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            var username_to_show = ""
+            if (data.author === userName)
+                username_to_show = "Me"
+            else
+                username_to_show = data.author
+
+            document.querySelector('#chat-log').value +=
+                (username_to_show +
+                ' -> ' +
+                data.content +
+                "       (" +
+                data.timestamp +
+                ")" +
+                '\n');
+        };
+
+        chatSocket.onclose = function (e) {
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function (e) {
+            if (e.key === 'Enter') {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        };
+
+        document.querySelector('#chat-message-submit').onclick = function (e) {
+            const messageInputDom = document.querySelector('#chat-message-input');
+            const message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                "author": userName,
+                "content": message,
+            }));
+            messageInputDom.value = '';
+        };
+    </script>
+</body>
+
+</html>
